@@ -15,16 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="demo1.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="FlightGame.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="demo2.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="demo3.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

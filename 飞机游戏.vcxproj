@@ -229,9 +229,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="demo1.cpp" />
-    <ClCompile Include="demo2.cpp" />
-    <ClCompile Include="demo3.cpp" />
     <ClCompile Include="FlightGame.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">E:\Libraries\Repository\raylib\src;</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">E:\Libraries\Repository\raylib\src;</AdditionalIncludeDirectories>
