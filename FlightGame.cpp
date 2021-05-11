@@ -1,4 +1,4 @@
-#include "raylib.h"
+﻿#include "raylib.h"
 #include "raymath.h"
 
 #include <iostream>
@@ -7,7 +7,7 @@
 #define HEIGHT 900.0f
 #define MAX_FPS 480.0f
 
-#define MAX_ENEMY 10
+#define MAX_ENEMY 15
 
 #define MAX_BULLET 20
 
@@ -25,14 +25,16 @@ public:
     float radius;
     float speed;
     float rotation;
-    bool active = false;
+    bool active;
 };
 
 class Player {
 public:
     void initialize() {
-        position = Vector2{ WIDTH / 2, HEIGHT - height};
+        position = Vector2{ WIDTH / 2, HEIGHT - height };
         rotation = 0.0f;
+        score = 0;
+        defeat = 0;
         health = PLAYER_HEALTH;
         for (int i = 0; i < MAX_BULLET; ++i) {
             bullet[i].attack = 1;
@@ -68,15 +70,16 @@ public:
         }
     }
 
-    void shoot() {
+    void shoot(Sound& shoot) {
         ++lag;
 
         if (IsKeyDown(KEY_SPACE) && lag > (MAX_FPS / PLAYER_SHOOT_RATE)) {
+            PlaySound(shoot);
             for (int i = 0; i < MAX_BULLET; ++i) {
                 if (!bullet[i].active) {
                     bullet[i].active = true;
                     bullet[i].position = Vector2{ position.x + sin(rotation * DEG2RAD) * (height / 2.5f),position.y - cos(rotation * DEG2RAD) * (height / 2.5f) };
-                    bullet[i].speed = speed * 3.0f ;
+                    bullet[i].speed = speed * 3.0f;
                     bullet[i].rotation = rotation;
                     break;
                 }
@@ -86,10 +89,10 @@ public:
 
         for (int i = 0; i < MAX_BULLET; ++i) {
             if (bullet[i].active) {
-                    bullet[i].position.x += bullet[i].speed * sin(bullet[i].rotation * DEG2RAD);
-                    bullet[i].position.y -= bullet[i].speed * cos(bullet[i].rotation * DEG2RAD);
+                bullet[i].position.x += bullet[i].speed * sin(bullet[i].rotation * DEG2RAD);
+                bullet[i].position.y -= bullet[i].speed * cos(bullet[i].rotation * DEG2RAD);
 
-                if (bullet[i].position.x > WIDTH ) {
+                if (bullet[i].position.x > WIDTH) {
                     bullet[i].active = false;
                 }
                 else if (bullet[i].position.x < 0) {
@@ -109,6 +112,8 @@ public:
     Vector2 position;
     float rotation;
     int health;
+    int score;
+    int defeat;
     int lag = 0;
     Color color = MAROON;
     Bullet bullet[MAX_BULLET];
@@ -128,6 +133,7 @@ public:
         health = radius / PLAYER_SIZE;
         survive = true;
         for (int i = 0; i < MAX_BULLET; ++i) {
+            bullet[i].active = false;
             bullet[i].attack = health;
             bullet[i].color = DARKGRAY;
             bullet[i].radius = radius / 7;
@@ -211,7 +217,48 @@ static int framesCounter;
 static bool gameOver;
 static bool pause;
 
-static void InitGame(void) {
+static void Welcome();
+static void InitGame(Music& background);
+static void UpdateGame(Music& background, Sound& shoot, Sound& defeat);
+static void DrawGame(Music& background, Sound& win, Sound& lose);
+static void UnloadGame(Music& background, Sound& shoot, Sound& defeat, Sound& win, Sound& lose);
+
+int main() {
+    Welcome();
+
+    Music background_music = LoadMusicStream("resources/background_music.ogg");
+    Sound shoot_sound = LoadSound("resources/shoot_sound.ogg");
+    Sound lose_sound = LoadSound("resources/lose_sound.ogg");
+    Sound win_sound = LoadSound("resources/win_sound.ogg");
+    Sound defeat_sound = LoadSound("resources/defeat_sound.ogg");
+
+    InitGame(background_music);
+
+    while (!WindowShouldClose()) {
+        UpdateGame(background_music, shoot_sound, defeat_sound);
+        DrawGame(background_music, win_sound, lose_sound);
+        UpdateMusicStream(background_music);
+    }
+
+    UnloadGame(background_music, shoot_sound, defeat_sound, win_sound, lose_sound);
+
+    return 0;
+}
+
+
+static void Welcome() {
+    InitWindow(WIDTH, HEIGHT, "飞机游戏");
+    InitAudioDevice();
+
+    BeginDrawing();
+    DrawText("<<< FLIGHT GAME >>>", WIDTH / 2 - MeasureText("<<< FLIGHT GAME >>>", 70) / 2, HEIGHT / 2 - 60, 70, SKYBLUE);
+    DrawText("PRESS [ENTER] TO PLAY", WIDTH / 2 - MeasureText("PRESS [ENTER] TO PLAY", 20) / 2, HEIGHT / 2 + 20, 20, BLACK);
+    EndDrawing();
+
+
+}
+
+static void InitGame(Music& background) {
     SetTargetFPS(MAX_FPS);
 
     framesCounter = 0;
@@ -221,12 +268,20 @@ static void InitGame(void) {
     for (int i = 0; i < MAX_ENEMY; ++i) { enemy[i].initialize(); }
     player.initialize();
 
-
+    PlayMusicStream(background);
 }
 
-static void UpdateGame(void) {
+static void UpdateGame(Music& background, Sound& shoot, Sound& defeat) {
     if (!gameOver) {
-        if (IsKeyPressed('P')) pause = !pause;
+        if (IsKeyPressed('P')) {
+            pause = !pause;
+            if (pause) {
+                PauseMusicStream(background);
+            }
+            else {
+                 ResumeMusicStream(background);
+            }
+        }
 
         if (!pause) {
 
@@ -236,63 +291,76 @@ static void UpdateGame(void) {
             player.move();
 
             //玩家--射击
-            player.shoot();
+            player.shoot(shoot);
 
             //玩家&&敌人--碰撞系统
             Vector2 place = { player.position.x + sin(player.rotation * DEG2RAD) * (player.height / 2.5f),player.position.y - cos(player.rotation * DEG2RAD) * (player.height / 2.5f) };
             for (int i = 0; i < MAX_ENEMY; i++) {
                 if (enemy[i].survive && CheckCollisionCircles({ place.x, place.y }, PLAYER_SIZE / 3, enemy[i].position, enemy[i].radius)) {
                     player.health -= enemy[i].health;
+                    ++player.defeat;
                     enemy[i].survive = false;
+                    PlaySound(defeat);
                 }
             }
 
             //玩家&&子弹--碰撞系统
-            for (int i = 0; i < MAX_BULLET; ++i) {
-                if (player.bullet[i].active) {
-                    place = { player.bullet[i].position.x,player.bullet[i].position.y };
-                    for (int j = 0; j < MAX_ENEMY; ++j) {
-                            if (enemy[j].survive && CheckCollisionCircles({ place.x, place.y }, player.bullet[i].radius, enemy[j].position, enemy[j].radius)) {
-                                --enemy[j].health;
-                                if (enemy[j].health <= 0) enemy[j].survive = false;
-                                player.bullet[i].active = false;
-                                break;
-                            }
+            for (int i = 0; i < MAX_ENEMY; ++i) {
+                if (enemy[i].survive) {
+                    for (int j = 0; j < MAX_BULLET; ++j) {
+                        if (enemy[i].bullet[j].active && CheckCollisionCircles({ place.x, place.y }, PLAYER_SIZE / 3, enemy[i].bullet[j].position, enemy[i].bullet[j].radius)) {
+                            player.health -= enemy[i].bullet[j].attack;
+                            enemy[i].bullet[j].active = false;
+                        }
                     }
                 }
             }
 
-            if (player.health == 0) { gameOver = true; }
+            if (player.health <= 0) { gameOver = true; }
 
             //敌人&&子弹--碰撞系统
-
-
+            for (int i = 0; i < MAX_BULLET; ++i) {
+                if (player.bullet[i].active) {
+                    place = { player.bullet[i].position.x,player.bullet[i].position.y };
+                    for (int j = 0; j < MAX_ENEMY; ++j) {
+                        if (enemy[j].survive && CheckCollisionCircles({ place.x, place.y }, player.bullet[i].radius, enemy[j].position, enemy[j].radius)) {
+                            --enemy[j].health;
+                            ++player.score;
+                            if (enemy[j].health <= 0) {
+                                enemy[j].survive = false;
+                                ++player.defeat;
+                                PlaySound(defeat);
+                            }
+                            player.bullet[i].active = false;
+                            break;
+                        }
+                    }
+                }
+            }
 
             //敌人--移动--射击
-            for (int i = 0; i < MAX_ENEMY; i++) { 
-
-                enemy[i].move(); 
+            for (int i = 0; i < MAX_ENEMY; i++) {
+                enemy[i].move();
                 enemy[i].shoot(player.position);
             }
 
-          
+            if (player.defeat == MAX_ENEMY) { gameOver = true; }
         }
     }
     else {
-        if (IsKeyPressed(KEY_SPACE)) {
-            InitGame();
+        if (IsKeyPressed(KEY_ENTER)) {
+            InitGame(background);
             gameOver = false;
         }
     }
-
 }
 
-static void DrawGame(void) {
+static void DrawGame(Music& background, Sound& win, Sound& lose) {
     BeginDrawing();
 
     ClearBackground(RAYWHITE);
 
-    if (!gameOver) {
+    
         //玩家
         Vector2 v1 = { player.position.x + sinf(player.rotation * DEG2RAD) * (player.height),
                       player.position.y - cosf(player.rotation * DEG2RAD) * (player.height) };
@@ -314,7 +382,7 @@ static void DrawGame(void) {
 
                 //敌人--子弹
                 for (int j = 0; j < MAX_BULLET; ++j) {
-                    if (enemy[i].bullet[j].active == true){ DrawCircleV(enemy[i].bullet[j].position, enemy[i].bullet[j].radius, enemy[i].bullet[j].color); }
+                    if (enemy[i].bullet[j].active == true) { DrawCircleV(enemy[i].bullet[j].position, enemy[i].bullet[j].radius, enemy[i].bullet[j].color); }
                 }
             }
             else {
@@ -328,33 +396,45 @@ static void DrawGame(void) {
 
         DrawText(TextFormat("HEALTH: %d", player.health), WIDTH - 120, 10, 15, BLACK);
         DrawText(TextFormat("SPEED: %.02f", player.speed), WIDTH - 120, 30, 15, BLACK);
+        DrawText(TextFormat("SCORE: %d", player.score), WIDTH - 120, 50, 15, BLACK);
 
-    }
-    else {
-        DrawText("PRESS [SPACE] TO PLAY AGAIN", WIDTH / 2 - MeasureText("PRESS [SPACE] TO PLAY AGAIN", 20) / 2, HEIGHT / 2 - 50, 20, GRAY);
-    }
+        //胜利||失败
+        if (gameOver && player.defeat == MAX_ENEMY) {
+            DrawText("--- YOU WIN ---", WIDTH / 2 - MeasureText("--- YOU WIN ---", 50) / 2, HEIGHT / 2 - 60, 50, RED);
+            DrawText("PRESS [ENTER] TO PLAY AGAIN", WIDTH / 2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20) / 2, HEIGHT / 2, 20, BLACK);
+
+            if (IsMusicPlaying(background)) StopMusicStream(background);
+            if (!pause) {
+                PlaySound(win);
+                pause = !pause;
+            }
+        }
+        else if (gameOver) {
+            DrawText("--- YOU LOSE ---", WIDTH / 2 - MeasureText("--- YOU LOSE ---", 50) / 2, HEIGHT / 2 - 60, 50, RED);
+            DrawText("PRESS [ENTER] TO PLAY AGAIN", WIDTH / 2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20) / 2, HEIGHT / 2 , 20, BLACK);
+
+            if (IsMusicPlaying(background)) StopMusicStream(background);
+            if (!pause) {
+                PlaySound(lose);
+                pause = !pause;
+            }
+        }
+
+        //暂停
+        if (pause && !gameOver) {
+            DrawText("PAUSED", WIDTH / 2 - MeasureText("PAUSED", 50) / 2, HEIGHT / 2 - 60, 50, BLACK);
+        }
 
     EndDrawing();
 }
 
-static void UnloadGame(void) {
+static void UnloadGame(Music& background, Sound& shoot, Sound& defeat, Sound& win, Sound& lose) {
+    UnloadMusicStream(background);
+    UnloadSound(shoot);
+    UnloadSound(lose);
+    UnloadSound(win);
+    UnloadSound(defeat);
 
-}
-
-int main() {
-    InitWindow(WIDTH, HEIGHT, "飞机游戏");
-    InitGame();
-
-    while (!WindowShouldClose()) {
-        UpdateGame();
-        DrawGame();
-    }
-
-    UnloadGame();
-
+    CloseAudioDevice();
     CloseWindow();
-
-    return 0;
 }
-
-
