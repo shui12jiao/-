@@ -231,7 +231,7 @@ static void DrawGameU(Music& background, Sound& end);
 static void UnloadGame(Music& background, Music& backgroundU, Sound& shoot, Sound& defeat, Sound& win, Sound& lose, Sound& end);
 
 int main() {
-    InitWindow(WIDTH, HEIGHT, "飞机游戏");
+    InitWindow(WIDTH, HEIGHT, "Flight Game");
     InitAudioDevice();
     SetExitKey(KEY_NULL);
 
