@@ -1,19 +1,23 @@
-﻿#include "raylib.h"
+﻿#pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
+
+#include "raylib.h"
 #include "raymath.h"
 
-#define WIDTH 1600.0f
-#define HEIGHT 900.0f
-#define MAX_FPS 480.0f
+//WASD进行上下左右移动, P键暂停游戏, Esc键退出当前游戏, Enter键进入游戏
 
-#define MAX_ENEMY 15
+#define WIDTH 1600.0f               //设置宽
+#define HEIGHT 900.0f               //设置高
+#define MAX_FPS 480.0f              //设置FPS最大值(别太高)
 
-#define MAX_BULLET 20
+#define MAX_ENEMY 15                //设置敌人数目
 
-#define PLAYER_HEALTH 20
-#define PLAYER_SIZE 20.0f
-#define PLAYER_SPEED 3.0f
-#define PLAYER_ROTATION_SPEED 3.0f
-#define PLAYER_SHOOT_RATE 4
+#define MAX_BULLET 20               //设置飞机最大存在子弹数目
+
+#define PLAYER_HEALTH 20            //设置普通模式下面飞机血量
+#define PLAYER_SIZE 20.0f           //设置飞机大小
+#define PLAYER_SPEED 3.0f           //设置飞机移动速度
+#define PLAYER_ROTATION_SPEED 3.0f  //设置飞机转向速度
+#define PLAYER_SHOOT_RATE 4         //设置飞机开火速度 
 
 class Bullet {
 public:
