@@ -140,11 +140,18 @@ class Enemy {
         health = radius / PLAYER_SIZE;
         survive = true;
         for (int i = 0; i < MAX_BULLET; ++i) {
-            bullet[i].active = false;
+            //bullet[i].active = false;
             bullet[i].attack = health;
             bullet[i].color = DARKGRAY;
             bullet[i].radius = radius / 7;
         }
+    }
+
+    void initializeU() {
+        position.x = (float)GetRandomValue(0, WIDTH);
+        position.y = (float)GetRandomValue(0, HEIGHT / 2);
+        health = radius / PLAYER_SIZE;
+        survive = true;
     }
 
     void move() {
@@ -167,10 +174,8 @@ class Enemy {
 
     void shoot(Vector2& pPosition) {
         ++lag;
-        float rotation;
-
         if (survive && lag > (MAX_FPS * radius / 50)) {
-            rotation = 180 - atan((pPosition.x - position.x) / (pPosition.y - position.y)) * RAD2DEG;
+            float rotation = 180 - atan((pPosition.x - position.x) / (pPosition.y - position.y)) * RAD2DEG;
 
             for (int i = 0; i < MAX_BULLET; ++i) {
                 if (!bullet[i].active) {
@@ -366,14 +371,12 @@ static void UpdateGame(Music& background, Sound& shoot, Sound& defeat) {
 
             //玩家&&子弹--碰撞系统
             for (int i = 0; i < MAX_ENEMY; ++i) {
-                if (enemy[i].survive) {
-                    for (int j = 0; j < MAX_BULLET; ++j) {
-                        if (enemy[i].bullet[j].active &&
-                            CheckCollisionCircles({place.x, place.y}, PLAYER_SIZE / 3, enemy[i].bullet[j].position,
-                                                  enemy[i].bullet[j].radius)) {
-                            player.health -= enemy[i].bullet[j].attack;
-                            enemy[i].bullet[j].active = false;
-                        }
+                for (int j = 0; j < MAX_BULLET; ++j) {
+                    if (enemy[i].bullet[j].active &&
+                        CheckCollisionCircles({ place.x, place.y }, PLAYER_SIZE / 3, enemy[i].bullet[j].position,
+                            enemy[i].bullet[j].radius)) {
+                        player.health -= enemy[i].bullet[j].attack;
+                        enemy[i].bullet[j].active = false;
                     }
                 }
             }
@@ -453,7 +456,7 @@ static void UpdateGameU(Music& background, Sound& shoot, Sound& defeat) {
                 if (CheckCollisionCircles({place.x, place.y}, PLAYER_SIZE / 3, enemy[i].position, enemy[i].radius)) {
                     player.health -= enemy[i].health;
                     ++player.defeat;
-                    enemy[i].initialize();
+                    enemy[i].initializeU();
                     PlaySound(defeat);
                 }
             }
@@ -484,7 +487,7 @@ static void UpdateGameU(Music& background, Sound& shoot, Sound& defeat) {
                             --enemy[j].health;
                             ++player.score;
                             if (enemy[j].health <= 0) {
-                                enemy[j].initialize();
+                                enemy[j].initializeU();
                                 ++player.defeat;
                                 PlaySound(defeat);
                             }
@@ -534,15 +537,14 @@ static void DrawGame(Music& background, Sound& win, Sound& lose) {
     for (int i = 0; i < MAX_ENEMY; i++) {
         if (enemy[i].survive) {
             DrawCircleV(enemy[i].position, enemy[i].radius, GRAY);
-
-            //敌人--子弹
-            for (int j = 0; j < MAX_BULLET; ++j) {
-                if (enemy[i].bullet[j].active == true) {
-                    DrawCircleV(enemy[i].bullet[j].position, enemy[i].bullet[j].radius, enemy[i].bullet[j].color);
-                }
-            }
         } else {
             DrawCircleV(enemy[i].position, enemy[i].radius, Fade(LIGHTGRAY, 0.3f));
+        }
+        //敌人--子弹
+        for (int j = 0; j < MAX_BULLET; ++j) {
+            if (enemy[i].bullet[j].active == true) {
+                DrawCircleV(enemy[i].bullet[j].position, enemy[i].bullet[j].radius, enemy[i].bullet[j].color);
+            }
         }
     }
 
